@@ -1,0 +1,45 @@
+name: sm-homepage
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-corphomepage}
+      POSTGRES_USER: ${POSTGRES_USER:-corphomepage}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Debes definir POSTGRES_PASSWORD en .env (el deploy.sh la genera automáticamente)}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-corphomepage} -d ${POSTGRES_DB:-corphomepage}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: ./server
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "127.0.0.1:${PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-corphomepage}:${POSTGRES_PASSWORD:?Debes definir POSTGRES_PASSWORD en .env (el deploy.sh la genera automáticamente)}@db:5432/${POSTGRES_DB:-corphomepage}
+      NODE_ENV: ${NODE_ENV:-production}
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Logo de la empresa subido por super_admin (persistente entre rebuilds).
+      - uploads:/app/public/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/login > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  uploads:

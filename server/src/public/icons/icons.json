@@ -1,0 +1,227 @@
+[
+  {
+    "slug": "proxmox",
+    "label": "Proxmox",
+    "category": "Virtualización"
+  },
+  {
+    "slug": "kubernetes",
+    "label": "Kubernetes",
+    "category": "Contenedores"
+  },
+  {
+    "slug": "portainer",
+    "label": "Portainer",
+    "category": "Contenedores"
+  },
+  {
+    "slug": "docker",
+    "label": "Docker",
+    "category": "Contenedores"
+  },
+  {
+    "slug": "grafana",
+    "label": "Grafana",
+    "category": "Monitorización"
+  },
+  {
+    "slug": "prometheus",
+    "label": "Prometheus",
+    "category": "Monitorización"
+  },
+  {
+    "slug": "uptime-kuma",
+    "label": "Uptime Kuma",
+    "category": "Monitorización"
+  },
+  {
+    "slug": "authentik",
+    "label": "Authentik",
+    "category": "Identidad"
+  },
+  {
+    "slug": "keycloak",
+    "label": "Keycloak",
+    "category": "Identidad"
+  },
+  {
+    "slug": "vaultwarden",
+    "label": "Vaultwarden",
+    "category": "Identidad"
+  },
+  {
+    "slug": "nextcloud",
+    "label": "Nextcloud",
+    "category": "NAS/Archivos"
+  },
+  {
+    "slug": "truenas",
+    "label": "TrueNAS",
+    "category": "NAS/Archivos"
+  },
+  {
+    "slug": "paperless-ngx",
+    "label": "Paperless-ngx",
+    "category": "NAS/Archivos"
+  },
+  {
+    "slug": "jellyfin",
+    "label": "Jellyfin",
+    "category": "Media"
+  },
+  {
+    "slug": "plex",
+    "label": "Plex",
+    "category": "Media"
+  },
+  {
+    "slug": "immich",
+    "label": "Immich",
+    "category": "Media"
+  },
+  {
+    "slug": "photoprism",
+    "label": "PhotoPrism",
+    "category": "Media"
+  },
+  {
+    "slug": "gitlab",
+    "label": "GitLab",
+    "category": "Desarrollo"
+  },
+  {
+    "slug": "gitea",
+    "label": "Gitea",
+    "category": "Desarrollo"
+  },
+  {
+    "slug": "jenkins",
+    "label": "Jenkins",
+    "category": "Desarrollo"
+  },
+  {
+    "slug": "code-server",
+    "label": "code-server",
+    "category": "Desarrollo"
+  },
+  {
+    "slug": "adguard-home",
+    "label": "AdGuard Home",
+    "category": "Red"
+  },
+  {
+    "slug": "pi-hole",
+    "label": "Pi-hole",
+    "category": "Red"
+  },
+  {
+    "slug": "nginx",
+    "label": "NGINX",
+    "category": "Red"
+  },
+  {
+    "slug": "traefik",
+    "label": "Traefik",
+    "category": "Red"
+  },
+  {
+    "slug": "caddy",
+    "label": "Caddy",
+    "category": "Red"
+  },
+  {
+    "slug": "openvpn",
+    "label": "OpenVPN",
+    "category": "Red"
+  },
+  {
+    "slug": "wireguard",
+    "label": "WireGuard",
+    "category": "Red"
+  },
+  {
+    "slug": "home-assistant",
+    "label": "Home Assistant",
+    "category": "Domótica"
+  },
+  {
+    "slug": "frigate",
+    "label": "Frigate",
+    "category": "Domótica"
+  },
+  {
+    "slug": "octoprint",
+    "label": "OctoPrint",
+    "category": "Domótica"
+  },
+  {
+    "slug": "n8n",
+    "label": "n8n",
+    "category": "Automatización"
+  },
+  {
+    "slug": "actual-budget",
+    "label": "Actual Budget",
+    "category": "Otros"
+  },
+  {
+    "slug": "postgresql",
+    "label": "PostgreSQL",
+    "category": "Otros"
+  },
+  {
+    "slug": "redis",
+    "label": "Redis",
+    "category": "Otros"
+  },
+  {
+    "slug": "minio",
+    "label": "MinIO",
+    "category": "Otros"
+  },
+  {
+    "slug": "elasticsearch",
+    "label": "Elasticsearch",
+    "category": "Otros"
+  },
+  {
+    "slug": "wordpress",
+    "label": "WordPress",
+    "category": "Otros"
+  },
+  {
+    "slug": "ghost",
+    "label": "Ghost",
+    "category": "Otros"
+  },
+  {
+    "slug": "bookstack",
+    "label": "BookStack",
+    "category": "Otros"
+  },
+  {
+    "slug": "server",
+    "label": "Servidor",
+    "category": "Genéricos"
+  },
+  {
+    "slug": "globe",
+    "label": "Globo",
+    "category": "Genéricos"
+  },
+  {
+    "slug": "cloud",
+    "label": "Nube",
+    "category": "Genéricos"
+  },
+  {
+    "slug": "database",
+    "label": "Base de datos",
+    "category": "Genéricos"
+  },
+  {
+    "slug": "shield",
+    "label": "Escudo",
+    "category": "Genéricos"
+  }
+]

@@ -1,0 +1,115 @@
+<div class="dashboard">
+  <section class="dashboard-hero">
+    <div class="spotlight-wrap">
+      <svg class="spotlight-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input
+        type="search"
+        id="spotlight"
+        class="spotlight"
+        placeholder="Busca tu aplicación (nombre, descripción, categoría)…"
+        autocomplete="off"
+        aria-label="Buscar aplicación">
+    </div>
+    <% if (isAuthed && groups.length > 0) { %>
+      <div class="group-chips" role="group" aria-label="Filtrar aplicaciones por grupo">
+        <button type="button" class="chip chip-active" data-group="all" aria-pressed="true">Todos</button>
+        <% groups.forEach(function (g) { %>
+          <button type="button" class="chip" data-group="<%= g.name %>" aria-pressed="false"><%= g.name %></button>
+        <% }) %>
+      </div>
+    <% } %>
+    <% if (isAuthed) { %>
+      <p class="dashboard-welcome">
+        Hola, <strong><%= user.displayName %></strong><% if (groups.length > 0) { %> — tus grupos: <em><%= groups.map(g => g.name).join(', ') %></em><% } else { %> — aún no tienes grupos asignados<% } %>.
+      </p>
+    <% } else { %>
+      <p class="dashboard-welcome">Bienvenido — estas son las aplicaciones públicas del portal.</p>
+    <% } %>
+  </section>
+
+  <% if (appCount === 0) { %>
+    <div class="empty-state">
+      <div class="empty-state-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      </div>
+      <h2><%= isAuthed ? 'Sin aplicaciones visibles' : 'Sin aplicaciones públicas' %></h2>
+      <p>
+        <% if (isAuthed) { %>
+          No tienes aplicaciones visibles todavía. Pide a tu administrador que configure el portal.
+        <% } else { %>
+          Todavía no hay aplicaciones públicas publicadas. Vuelve pronto.
+        <% } %>
+      </p>
+    </div>
+  <% } else { %>
+    <% grouped.forEach(function (cat) { %>
+      <section class="category" data-category="<%= cat.name %>">
+        <div class="category-head">
+          <h2 class="category-title"><%= cat.name %></h2>
+          <span class="category-count"><%= cat.apps.length %></span>
+        </div>
+        <div class="grid">
+          <% cat.apps.forEach(function (app) { %>
+            <a
+              class="app-card"
+              href="<%= app.url %>"
+              target="_blank"
+              rel="noopener noreferrer"
+              style="--accent: <%= app.color %>"
+              data-name="<%= app.name.toLowerCase() %>"
+              data-description="<%= (app.description || '').toLowerCase() %>"
+              data-category="<%= (app.category_name || app.category || 'General').toLowerCase() %>"
+              <% if (isAuthed) { %>data-app-groups='<%= JSON.stringify(app.groupNames || []) %>'<% } %>>
+              <div class="app-icon" aria-hidden="true">
+                <% if (app.icon.kind === 'url' || app.icon.kind === 'key') { %>
+                  <img class="app-icon-img <%= app.icon.kind === 'key' ? 'app-icon-img--key' : 'app-icon-img--custom' %>" src="<%= app.icon.url %>" alt="" loading="lazy"<% if (app.icon.kind === 'key') { %> title="Icono de la biblioteca"<% } %>>
+                  <span class="app-glyph app-glyph-fallback" data-glyph hidden><%= app.name.charAt(0).toUpperCase() %></span>
+                  <% if (app.icon.kind === 'key') { %>
+                    <span class="app-icon-badge" title="Icono de la biblioteca" aria-hidden="true"></span>
+                  <% } %>
+                <% } else if (app.icon.kind === 'class') { %>
+                  <span class="app-glyph"><i class="<%= app.icon.iconClass %>"></i><span class="app-glyph-char"><%= app.name.charAt(0).toUpperCase() %></span></span>
+                <% } else if (app.icon.kind === 'favicon') { %>
+                  <img
+                    class="app-icon-img app-icon-img--favicon"
+                    src="<%= app.icon.url %>"
+                    data-fallback-src="<%= app.icon.fallbackUrl %>"
+                    alt=""
+                    loading="lazy"
+                    title="Favicon automático del sitio">
+                  <span class="app-glyph app-glyph-fallback" data-glyph hidden><%= app.name.charAt(0).toUpperCase() %></span>
+                  <span class="app-icon-badge" title="Favicon automático" aria-hidden="true"></span>
+                <% } else { %>
+                  <span class="app-glyph"><%= app.name.charAt(0).toUpperCase() %></span>
+                <% } %>
+              </div>
+              <div class="app-info">
+                <span class="app-name"><%= app.name %></span>
+                <% if (app.description) { %>
+                  <span class="app-desc"><%= app.description %></span>
+                <% } %>
+                <span class="app-category"><%= app.category_name || app.category || 'General' %></span>
+              </div>
+              <span class="app-open" aria-hidden="true">↗</span>
+            </a>
+          <% }) %>
+        </div>
+      </section>
+    <% }) %>
+  <% } %>
+
+  <% if (!isAuthed && hasRestrictedApps) { %>
+    <section class="guest-panel" aria-label="Aplicaciones privadas">
+      <div class="guest-panel-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <div class="guest-panel-copy">
+        <h2>Inicia sesión para ver aplicaciones privadas</h2>
+        <p>Algunas aplicaciones están restringidas a los miembros de tu organización. Inicia sesión para descubrirlas.</p>
+      </div>
+      <a class="btn btn-primary" href="/login?next=/">Iniciar sesión</a>
+    </section>
+  <% } %>
+</div>
+
+<script src="/js/spotlight.js?v=<%= assetVersion('/js/spotlight.js') %>" defer></script>

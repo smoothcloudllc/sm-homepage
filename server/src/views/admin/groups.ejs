@@ -1,0 +1,64 @@
+<div class="admin-page">
+  <div class="page-head">
+    <div class="page-head-title">
+      <h1>Grupos</h1>
+      <p class="page-subtitle">Agrupaciones para controlar el acceso a aplicaciones restringidas.</p>
+    </div>
+    <% if (user.role === 'super_admin') { %>
+      <form method="post" action="/admin/groups" class="inline-form head-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="text" name="name" placeholder="Nuevo grupo" required aria-label="Nombre del nuevo grupo">
+        <button class="btn btn-primary">Crear</button>
+      </form>
+    <% } %>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <caption class="sr-only">Grupos del portal</caption>
+      <thead>
+        <tr>
+          <th scope="col">Nombre</th>
+          <th scope="col">Usuarios</th>
+          <th scope="col">Aplicaciones</th>
+          <th scope="col">Creado</th>
+          <th scope="col">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% groups.forEach(function (g) { %>
+          <tr>
+            <td><strong><%= g.name %></strong></td>
+            <td><span class="count-pill"><%= g.user_count %></span></td>
+            <td><span class="count-pill"><%= g.app_count %></span></td>
+            <td class="muted"><%= g.created_at ? g.created_at.toLocaleDateString() : '—' %></td>
+            <td class="row-actions">
+              <% if (user.role === 'super_admin') { %>
+                <details class="assign-details">
+                  <summary>Renombrar</summary>
+                  <form method="post" action="/admin/groups/<%= g.id %>/rename" class="inline-form">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="text" name="name" value="<%= g.name %>" required>
+                    <button class="btn btn-small">Guardar</button>
+                  </form>
+                </details>
+                <form method="post" action="/admin/groups/<%= g.id %>/delete" class="inline-form confirm-form"
+                      data-confirm="¿Borrar el grupo <%= g.name %>? Se quitará de usuarios y aplicaciones.">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-small btn-danger">Borrar</button>
+                </form>
+              <% } else { %>
+                <span class="muted">Solo lectura</span>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (groups.length === 0) { %>
+          <tr><td colspan="5" class="muted">No hay grupos todavía.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script src="/js/admin.js?v=<%= assetVersion('/js/admin.js') %>" defer></script>

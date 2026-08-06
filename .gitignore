@@ -1,0 +1,39 @@
+# Dependencias
+node_modules/
+
+# Entorno y secretos (todas las variantes)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Bóveda interna (NO se publica en el repositorio)
+docs/knowledge-base/
+
+# Datos internos / subidas
+server/public/uploads/
+
+# Backups y volcados de BD
+backups/
+*.sql
+*.dump
+
+# Logs
+*.log
+logs/
+deploy.log
+
+# Cobertura de tests y build
+coverage/
+dist/
+
+# Configuración local del editor Obsidian (NO publicar)
+docs/.obsidian/
+
+# Defensa adicional (artefactos de SO/editores/backups)
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.bak

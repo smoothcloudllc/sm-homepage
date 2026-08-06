@@ -1,0 +1,9 @@
+// Variables de entorno para los tests (sin .env, NODE_ENV=test).
+process.env.NODE_ENV = 'test';
+process.env.DATABASE_URL = 'postgres://test:test@localhost:5432/test';
+process.env.SESSION_SECRET = 'test-secret-for-vitest';
+process.env.SESSION_DAYS = '30';
+process.env.OTP_TTL_MIN = '10';
+process.env.ALLOWED_DOMAINS = 'testcorp.com';
+process.env.SUPER_ADMIN_EMAIL = 'admin@testcorp.com';
+process.env.MAIL_DRIVER = 'log';

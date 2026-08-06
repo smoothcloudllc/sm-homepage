@@ -1,0 +1,77 @@
+<div class="admin-page">
+  <div class="page-head">
+    <div class="page-head-title">
+      <h1><%= isEdit ? 'Editar usuario' : 'Nuevo usuario' %></h1>
+      <p class="page-subtitle"><%= isEdit ? 'Actualiza los datos y grupos del usuario.' : 'Crea una cuenta en el portal.' %></p>
+    </div>
+    <a class="btn btn-ghost" href="/admin/users">← Volver</a>
+  </div>
+
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-error" role="alert"><%= error %></div>
+  <% } %>
+
+  <form method="post" action="<%= isEdit ? '/admin/users/' + target.id : '/admin/users' %>" class="card form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+    <div class="form-section">
+      <h2 class="form-section-title">Información de la cuenta</h2>
+      <label class="field-label" for="u-email">Email</label>
+      <input type="email" id="u-email" name="email" required
+        value="<%= target ? target.email : '' %>"
+        <%= isEdit ? 'disabled' : '' %>>
+      <% if (isEdit) { %>
+        <p class="hint">El email no se puede cambiar.</p>
+      <% } %>
+
+      <label class="field-label" for="u-name">Nombre visible</label>
+      <input type="text" id="u-name" name="display_name" value="<%= target ? (target.display_name || '') : '' %>">
+
+      <label class="field-label" for="u-role">Rol</label>
+      <% if (!isEdit) { %>
+        <select name="role" id="u-role">
+          <option value="employee" selected>Empleado</option>
+          <% if (user.role === 'super_admin') { %>
+            <option value="admin">Admin</option>
+          <% } %>
+        </select>
+        <% if (user.role !== 'super_admin') { %>
+          <p class="hint">Solo un super_admin puede crear admins.</p>
+        <% } %>
+      <% } else if (target.role === 'super_admin') { %>
+        <span class="badge badge-super">Super admin</span>
+        <p class="hint">El rol de un super_admin no se puede cambiar desde la consola.</p>
+      <% } else { %>
+        <% var canChangeRole = user.role === 'super_admin' && target.role !== 'super_admin'; %>
+        <select name="role" id="u-role" <%= canChangeRole ? '' : 'disabled' %>>
+          <option value="employee" <%= target.role === 'employee' ? 'selected' : '' %>>Empleado</option>
+          <option value="admin" <%= target.role === 'admin' ? 'selected' : '' %>>Admin</option>
+        </select>
+        <% if (!canChangeRole) { %>
+          <p class="hint">No tienes permiso para cambiar este rol.</p>
+        <% } %>
+      <% } %>
+    </div>
+
+    <div class="form-section">
+      <h2 class="form-section-title">Grupos</h2>
+      <div class="multi-select">
+        <% if (groups.length === 0) { %>
+          <p class="hint">Aún no hay grupos. Crea grupos en /admin/groups.</p>
+        <% } %>
+        <% groups.forEach(function (g) { %>
+          <label>
+            <input type="checkbox" name="groups" value="<%= g.id %>"
+              <%= selectedGroupIds.includes(g.id) ? 'checked' : '' %>>
+            <%= g.name %>
+          </label>
+        <% }) %>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit"><%= isEdit ? 'Guardar cambios' : 'Crear usuario' %></button>
+      <a class="btn btn-ghost" href="/admin/users">Cancelar</a>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,94 @@
+<div class="auth-card">
+  <div class="auth-brand" aria-hidden="true">
+    <span class="brand-mark">
+      <img class="brand-logo" src="/logo?v=<%= typeof logoVersion !== 'undefined' ? logoVersion : '0' %>" alt="" width="30" height="30">
+    </span>
+  </div>
+  <h1 class="auth-title"><%= typeof siteName !== 'undefined' ? siteName : 'SM-HomePage' %></h1>
+  <p class="auth-subtitle">Iniciar sesión — accede con tu correo corporativo</p>
+
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-error" role="alert"><%= error %></div>
+  <% } %>
+  <% if (typeof info !== 'undefined' && info) { %>
+    <div class="alert alert-info"><%= info %></div>
+  <% } %>
+
+  <!-- Región viva para la notificación de envío (accesible: role=status + aria-live).
+       Oculta por defecto; login.js la rellena y la muestra tras un POST /auth/request
+       exitoso ("Código enviado a …"). El hint dev_code solo se añade en dev. -->
+  <div id="login-status" class="alert alert-info" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+
+  <form id="login-form" method="post" action="/auth/request" autocomplete="off">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="next" id="login-next" value="<%= typeof next !== 'undefined' && next ? next : '/' %>">
+    <label class="field-label" for="email">Correo corporativo</label>
+    <input
+      type="email"
+      id="email"
+      name="email"
+      required
+      autofocus
+      placeholder="nombre@tuempresa.com"
+      value="<%= typeof submittedEmail !== 'undefined' ? submittedEmail : '' %>">
+    <% if (typeof needsBootstrap !== 'undefined' && needsBootstrap) { %>
+      <% if (typeof bootstrapMode !== 'undefined' && bootstrapMode === 'code') { %>
+        <!-- Primer inicio con código de 6 dígitos (BOOTSTRAP_CODE). -->
+        <label class="field-label" for="bootstrap-code-input">Código de primer inicio (6 dígitos)</label>
+        <input
+          type="text"
+          id="bootstrap-code-input"
+          name="bootstrap_code"
+          autocomplete="off"
+          inputmode="numeric"
+          pattern="[0-9]{6}"
+          maxlength="6"
+          required
+          placeholder="000000"
+          aria-label="Código de primer inicio (6 dígitos)"
+          aria-describedby="bootstrap-code-hint">
+        <p class="hint" id="bootstrap-code-hint">Introduce el código de 6 dígitos mostrado una sola vez al final de la instalación (bash deploy.sh). Solo se exige en la primera activación del administrador.</p>
+      <% } else if (typeof bootstrapMode !== 'undefined' && bootstrapMode === 'token') { %>
+        <!-- Retrocompat: primer inicio con token hex (BOOTSTRAP_TOKEN). -->
+        <label class="field-label" for="bootstrap-token-input">Token de arranque (primera activación del administrador)</label>
+        <input
+          type="password"
+          id="bootstrap-token-input"
+          name="bootstrap_token"
+          autocomplete="off"
+          placeholder="Token de arranque de una sola vez">
+        <p class="hint">Si eres el administrador inicial, introduce el token BOOTSTRAP_TOKEN definido en el entorno (solo se exige en la primera activación).</p>
+      <% } %>
+      <%# bootstrapMode null/indefinido -> sin campo bootstrap (degradación segura). %>
+    <% } %>
+    <button type="submit" class="btn btn-primary btn-block btn-lg" id="request-btn">Enviar código</button>
+  </form>
+
+  <form id="verify-form" method="post" action="/auth/verify" class="verify-form" autocomplete="off" hidden>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="email" id="verify-email">
+    <input type="hidden" name="bootstrap_token" id="verify-bootstrap-token" autocomplete="off">
+    <input type="hidden" name="bootstrap_code" id="verify-bootstrap-code" autocomplete="off">
+    <input type="hidden" name="next" id="verify-next">
+    <label class="field-label" for="code">Código de 6 dígitos</label>
+    <input
+      type="text"
+      id="code"
+      name="code"
+      inputmode="numeric"
+      pattern="[0-9]{6}"
+      maxlength="6"
+      required
+      placeholder="000000">
+    <p class="hint">Código válido por <%= config.otpTtlMin %> minutos. Revísalo en tu bandeja de entrada.</p>
+    <button type="submit" class="btn btn-primary btn-block btn-lg" id="verify-btn">Acceder</button>
+    <button type="button" class="btn btn-ghost btn-block" id="back-btn">← Volver</button>
+  </form>
+
+  <div class="auth-note">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+    <span>Las aplicaciones públicas no requieren iniciar sesión — <a href="/">volver al portal</a>.</span>
+  </div>
+</div>
+
+<script src="/js/login.js?v=<%= assetVersion('/js/login.js') %>" defer></script>

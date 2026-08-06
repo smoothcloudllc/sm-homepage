@@ -1,0 +1,45 @@
+<div class="admin-page">
+  <div class="page-head">
+    <div class="page-head-title">
+      <h1>Auditoría</h1>
+      <p class="page-subtitle">Registro inmutable de eventos de seguridad y administración.</p>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table table-dense">
+      <caption class="sr-only">Eventos de auditoría del portal</caption>
+      <thead>
+        <tr>
+          <th scope="col">Fecha</th>
+          <th scope="col">Acción</th>
+          <th scope="col">Entidad</th>
+          <th scope="col">Actor</th>
+          <th scope="col">IP</th>
+          <th scope="col">Detalles</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% logs.forEach(function (log) { %>
+          <tr>
+            <td class="muted"><%= log.created_at.toLocaleString() %></td>
+            <td><span class="badge badge-action"><%= log.action %></span></td>
+            <td class="muted"><%= log.entity_type || '—' %> <%= log.entity_id ? '#' + log.entity_id : '' %></td>
+            <td><%= log.actor_email || 'sistema' %></td>
+            <td class="muted"><%= log.ip || '—' %></td>
+            <td class="muted code-cell"><%= log.details ? JSON.stringify(log.details) : '—' %></td>
+          </tr>
+        <% }) %>
+        <% if (logs.length === 0) { %>
+          <tr><td colspan="6" class="muted">Sin eventos registrados.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    <a class="btn btn-small <%= page <= 1 ? 'disabled' : '' %>" href="/admin/audit?page=<%= page - 1 %>">← Anterior</a>
+    <span class="pagination-info">Página <strong><%= page %></strong> de <strong><%= totalPages %></strong> (<%= total %> eventos)</span>
+    <a class="btn btn-small <%= page >= totalPages ? 'disabled' : '' %>" href="/admin/audit?page=<%= page + 1 %>">Siguiente →</a>
+  </div>
+</div>

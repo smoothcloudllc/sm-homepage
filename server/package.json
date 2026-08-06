@@ -1,0 +1,31 @@
+{
+  "name": "sm-homepage-server",
+  "version": "1.0.0",
+  "description": "Portal corporativo de acceso a aplicaciones estilo Heimdall (MVP)",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.4.1",
+    "helmet": "^7.2.0",
+    "multer": "^2.2.0",
+    "nodemailer": "^9.0.4",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0",
+    "vitest": "^2.1.8"
+  }
+}

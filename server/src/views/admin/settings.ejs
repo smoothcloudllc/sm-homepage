@@ -1,0 +1,84 @@
+<div class="admin-page">
+  <div class="page-head">
+    <div class="page-head-title">
+      <h1>Configuración</h1>
+      <p class="page-subtitle">Personalización del portal, dominios de confianza y logo. Solo super_admin.</p>
+    </div>
+  </div>
+
+  <% if (typeof saved !== 'undefined' && saved) { %>
+    <div class="alert alert-info">Configuración guardada correctamente. Se aplica en runtime sin reiniciar.</div>
+  <% } %>
+  <% if (typeof logoSaved !== 'undefined' && logoSaved) { %>
+    <div class="alert alert-info">Logo actualizado. Los navegadores recargarán la nueva versión (<code>/logo?v=…</code>).</div>
+  <% } %>
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-error" role="alert"><%= error %></div>
+  <% } %>
+
+  <form method="post" action="/admin/settings" class="card form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+    <div class="form-section">
+      <h2 class="form-section-title">Portal</h2>
+
+      <label class="field-label" for="s-site-name">Nombre del sitio</label>
+      <input type="text" id="s-site-name" name="site_name" required
+        value="<%= settings.site_name %>">
+
+      <label class="field-label" for="s-theme">Tema por defecto</label>
+      <select name="default_theme" id="s-theme">
+        <option value="system" <%= settings.default_theme === 'system' ? 'selected' : '' %>>Sistema (preferencia del navegador)</option>
+        <option value="light" <%= settings.default_theme === 'light' ? 'selected' : '' %>>Claro</option>
+        <option value="dark" <%= settings.default_theme === 'dark' ? 'selected' : '' %>>Oscuro</option>
+      </select>
+      <p class="hint">El usuario puede cambiarlo con el botón del encabezado (se guarda en su navegador).</p>
+
+      <label class="field-label" for="s-mail-from">Remitente de los correos OTP (opcional)</label>
+      <input type="email" id="s-mail-from" name="mail_from" placeholder="no-reply@miempresa.com"
+        value="<%= settings.mail_from %>">
+      <p class="hint">Tiene precedencia sobre MAIL_FROM. Nunca se guardan secretos (claves de SMTP) aquí.</p>
+    </div>
+
+    <div class="form-section">
+      <h2 class="form-section-title">Dominios de confianza</h2>
+      <label class="field-label" for="s-domains">Dominios permitidos para iniciar sesión</label>
+      <textarea id="s-domains" name="allowed_domains" rows="4"
+        placeholder="miempresa.com&#10;otraempresa.com"><%= allowedDomains.join('\n') %></textarea>
+      <p class="hint">Un dominio por línea o separado por comas. Se guardan en minúsculas.</p>
+
+      <% if (Object.keys(activeDomains).length > 0) { %>
+        <div class="alert alert-info" role="status">
+          Usuarios activos por dominio actual:
+          <% Object.entries(activeDomains).forEach(function ([domain, count]) { %>
+            <span class="badge"><%= domain %>: <%= count %></span>
+          <% }) %>
+          <br>Si quitas un dominio con usuarios activos, se pedirá confirmación al guardar.
+        </div>
+      <% } %>
+
+      <label class="checkbox-confirm">
+        <input type="checkbox" name="confirm_remove_domains" value="1">
+        Confirmo que puedo eliminar dominios aunque haya usuarios activos en ellos.
+      </label>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">Guardar configuración</button>
+    </div>
+  </form>
+
+  <div class="card form settings-logo-block">
+    <h2 class="form-section-title">Logo de la empresa</h2>
+    <p class="page-subtitle">PNG o JPEG, máximo 2 MB y 2048 px por lado. Solo super_admin. Los emails quedan fuera del portal interno.</p>
+    <div class="logo-preview">
+      <img src="/logo?v=<%= logoVersion %>" alt="Vista previa del logo" width="96" height="96">
+    </div>
+    <form method="post" action="/admin/settings/logo?_csrf=<%= csrfToken %>" enctype="multipart/form-data" class="logo-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label class="field-label" for="s-logo">Archivo de imagen</label>
+      <input type="file" id="s-logo" name="logo" accept=".png,.jpg,.jpeg" required>
+      <button class="btn btn-primary" type="submit">Subir logo</button>
+    </form>
+  </div>
+</div>

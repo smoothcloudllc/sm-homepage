@@ -1,0 +1,73 @@
+<div class="admin-page">
+  <div class="page-head">
+    <div class="page-head-title">
+      <h1>Categorías</h1>
+      <p class="page-subtitle">Agrupaciones del panel de aplicaciones. El dashboard agrupa por estas categorías.</p>
+    </div>
+    <form method="post" action="/admin/categories" class="inline-form head-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="text" name="name" placeholder="Nueva categoría" required maxlength="80" aria-label="Nombre de la nueva categoría">
+      <button class="btn btn-primary">Crear</button>
+    </form>
+  </div>
+
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-error" role="alert"><%= error %></div>
+  <% } %>
+
+  <div class="alert alert-warn">
+    Si una categoría tiene aplicaciones no se puede borrar: usa "reasignar a General" para moverlas antes de borrarla. La categoría <strong>General</strong> está protegida.
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <caption class="sr-only">Categorías del portal</caption>
+      <thead>
+        <tr>
+          <th scope="col">Nombre</th>
+          <th scope="col">Aplicaciones</th>
+          <th scope="col">Creado</th>
+          <th scope="col">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% categories.forEach(function (c) { %>
+          <tr>
+            <td><strong><%= c.name %></strong><% if (String(c.name).toLowerCase() === 'general') { %> <span class="badge">protegida</span><% } %></td>
+            <td><span class="count-pill"><%= c.app_count %></span></td>
+            <td class="muted"><%= c.created_at ? c.created_at.toLocaleDateString() : '—' %></td>
+            <td class="row-actions">
+              <details class="assign-details">
+                <summary>Renombrar</summary>
+                <form method="post" action="/admin/categories/<%= c.id %>/rename" class="inline-form">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <input type="text" name="name" value="<%= c.name %>" required maxlength="80">
+                  <button class="btn btn-small">Guardar</button>
+                </form>
+              </details>
+              <% if (String(c.name).toLowerCase() !== 'general') { %>
+                <form method="post" action="/admin/categories/<%= c.id %>/delete" class="inline-form confirm-form"
+                      data-confirm="¿Borrar la categoría <%= c.name %>?">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-small btn-danger">Borrar</button>
+                </form>
+                <form method="post" action="/admin/categories/<%= c.id %>/delete?reassign=true" class="inline-form confirm-form"
+                      data-confirm="¿Reasignar las aplicaciones de <%= c.name %> a General y borrar la categoría?">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-small" title="Reasigna a General y borra">Reasignar y borrar</button>
+                </form>
+              <% } else { %>
+                <span class="muted">—</span>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (categories.length === 0) { %>
+          <tr><td colspan="4" class="muted">No hay categorías todavía.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script src="/js/admin.js?v=<%= assetVersion('/js/admin.js') %>" defer></script>

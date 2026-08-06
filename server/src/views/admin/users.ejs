@@ -1,0 +1,72 @@
+<div class="admin-page">
+  <div class="page-head">
+    <div class="page-head-title">
+      <h1>Usuarios</h1>
+      <p class="page-subtitle">Cuentas del portal, roles y pertenencia a grupos.</p>
+    </div>
+    <a class="btn btn-primary" href="/admin/users/new">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      Nuevo usuario
+    </a>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <caption class="sr-only">Usuarios registrados en el portal</caption>
+      <thead>
+        <tr>
+          <th scope="col">Email</th>
+          <th scope="col">Nombre</th>
+          <th scope="col">Rol</th>
+          <th scope="col">Estado</th>
+          <th scope="col">Grupos</th>
+          <th scope="col">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% users.forEach(function (u) { %>
+          <tr>
+            <td><strong><%= u.email %></strong></td>
+            <td><%= u.display_name || '—' %></td>
+            <td>
+              <% if (u.role === 'super_admin') { %>
+                <span class="badge badge-super">Super admin</span>
+              <% } else if (u.role === 'admin') { %>
+                <span class="badge badge-ok">Admin</span>
+              <% } else { %>
+                <span class="badge">Empleado</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (u.status === 'active') { %>
+                <span class="badge badge-ok"><span class="badge-dot" aria-hidden="true"></span>Activo</span>
+              <% } else { %>
+                <span class="badge badge-warn"><span class="badge-dot" aria-hidden="true"></span>Inactivo</span>
+              <% } %>
+            </td>
+            <td class="muted"><%= u.groups.length > 0 ? u.groups.map(g => g.name).join(', ') : '—' %></td>
+            <td class="row-actions">
+              <a class="btn btn-small" href="/admin/users/<%= u.id %>/edit">Editar</a>
+              <% if (u.status === 'active') { %>
+                <form method="post" action="/admin/users/<%= u.id %>/status" class="inline-form confirm-form"
+                      data-confirm="¿Desactivar a <%= u.email %>? Se cerrarán todas sus sesiones.">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <input type="hidden" name="status" value="inactive">
+                  <button class="btn btn-small btn-danger">Desactivar</button>
+                </form>
+              <% } else { %>
+                <form method="post" action="/admin/users/<%= u.id %>/status" class="inline-form">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <input type="hidden" name="status" value="active">
+                  <button class="btn btn-small">Activar</button>
+                </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script src="/js/admin.js?v=<%= assetVersion('/js/admin.js') %>" defer></script>

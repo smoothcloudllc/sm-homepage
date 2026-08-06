@@ -1,0 +1,107 @@
+<div class="admin-page">
+  <div class="page-head">
+    <div class="page-head-title">
+      <h1>Aplicaciones</h1>
+      <p class="page-subtitle">Catálogo completo del portal y asignación de acceso por grupos.</p>
+    </div>
+    <% if (user.role === 'super_admin') { %>
+      <a class="btn btn-primary" href="/admin/apps/new">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Nueva aplicación
+      </a>
+    <% } %>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <caption class="sr-only">Aplicaciones registradas en el portal</caption>
+      <thead>
+        <tr>
+          <th scope="col">Nombre</th>
+          <th scope="col">Categoría</th>
+          <th scope="col">Visibilidad</th>
+          <th scope="col">Grupos asignados</th>
+          <th scope="col">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% apps.forEach(function (app) { %>
+          <tr>
+            <td>
+              <div class="cell-primary">
+                <span class="cell-app-icon" style="--dot: <%= app.color %>" aria-hidden="true">
+                  <% if (app.icon.kind === 'url' || app.icon.kind === 'key') { %>
+                    <img class="app-icon-img <%= app.icon.kind === 'key' ? 'app-icon-img--key' : 'app-icon-img--custom' %>" src="<%= app.icon.url %>" alt=""<% if (app.icon.kind === 'key') { %> title="Icono de la biblioteca"<% } %>>
+                    <span class="app-glyph app-glyph-fallback" data-glyph hidden><%= app.name.charAt(0).toUpperCase() %></span>
+                  <% } else if (app.icon.kind === 'class') { %>
+                    <span class="app-glyph"><i class="<%= app.icon.iconClass %>"></i><span class="app-glyph-char"><%= app.name.charAt(0).toUpperCase() %></span></span>
+                  <% } else if (app.icon.kind === 'favicon') { %>
+                    <img
+                      class="app-icon-img app-icon-img--favicon"
+                      src="<%= app.icon.url %>"
+                      data-fallback-src="<%= app.icon.fallbackUrl %>"
+                      alt=""
+                      title="Favicon automático del sitio">
+                    <span class="app-glyph app-glyph-fallback" data-glyph hidden><%= app.name.charAt(0).toUpperCase() %></span>
+                  <% } else { %>
+                    <span class="app-glyph"><%= app.name.charAt(0).toUpperCase() %></span>
+                  <% } %>
+                </span>
+                <div>
+                  <strong><%= app.name %></strong>
+                  <div class="muted cell-url"><%= app.url %></div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge"><%= app.category_name || app.category || 'General' %></span></td>
+            <td>
+              <% if (app.visibility === 'restricted') { %>
+                <span class="badge badge-warn">Restringida</span>
+              <% } else { %>
+                <span class="badge badge-ok">Pública</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (app.groups.length === 0) { %>
+                <span class="muted">—</span>
+              <% } else { %>
+                <span class="badge-group"><%= app.groups.map(g => g.name).join(', ') %></span>
+              <% } %>
+            </td>
+            <td class="row-actions">
+              <% if (user.role === 'super_admin') { %>
+                <a class="btn btn-small" href="/admin/apps/<%= app.id %>/edit">Editar</a>
+                <form method="post" action="/admin/apps/<%= app.id %>/delete" class="inline-form confirm-form"
+                      data-confirm="¿Borrar esta aplicación?">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-small btn-danger">Borrar</button>
+                </form>
+              <% } %>
+              <details class="assign-details">
+                <summary>Asignar grupos</summary>
+                <form method="post" action="/admin/apps/<%= app.id %>/groups">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <div class="multi-select">
+                    <% groups.forEach(function (g) { %>
+                      <label>
+                        <input type="checkbox" name="groups" value="<%= g.id %>"
+                          <%= app.groupIds.includes(g.id) ? 'checked' : '' %>>
+                        <%= g.name %>
+                      </label>
+                    <% }) %>
+                  </div>
+                  <button class="btn btn-small">Guardar</button>
+                </form>
+              </details>
+            </td>
+          </tr>
+        <% }) %>
+        <% if (apps.length === 0) { %>
+          <tr><td colspan="5" class="muted">No hay aplicaciones todavía.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script src="/js/admin.js?v=<%= assetVersion('/js/admin.js') %>" defer></script>

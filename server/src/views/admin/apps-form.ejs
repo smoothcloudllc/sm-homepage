@@ -1,0 +1,193 @@
+<div class="admin-page">
+  <div class="page-head">
+    <div class="page-head-title">
+      <h1><%= isEdit ? 'Editar aplicación' : 'Nueva aplicación' %></h1>
+      <p class="page-subtitle"><%= isEdit ? 'Actualiza los datos de la aplicación y su acceso.' : 'Registra una aplicación en el portal.' %></p>
+    </div>
+    <a class="btn btn-ghost" href="/admin/apps">← Volver</a>
+  </div>
+
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-error" role="alert"><%= error %></div>
+  <% } %>
+
+  <form method="post" action="<%= isEdit ? '/admin/apps/' + app.id : '/admin/apps' %>" class="card form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+    <div class="form-section">
+      <h2 class="form-section-title">Información básica</h2>
+      <label class="field-label" for="f-name">Nombre *</label>
+      <input type="text" id="f-name" name="name" required value="<%= app ? app.name : '' %>">
+
+      <label class="field-label" for="f-url">URL *</label>
+      <input type="url" id="f-url" name="url" required placeholder="https://…" value="<%= app ? app.url : '' %>">
+      <p class="hint">La URL se abre en el navegador del usuario (target _blank, rel noopener).</p>
+    </div>
+
+    <div class="form-section">
+      <h2 class="form-section-title">Icono</h2>
+      <p class="hint">
+        Cadena de resolución: 1) URL externa / icono subido → 2) icono de la biblioteca →
+        3) clase de fuente → 4) favicon del dominio público → 5) inicial con el color.
+      </p>
+
+      <div class="form-grid">
+        <div>
+          <label class="field-label" for="f-icon-url">Icono externo (URL)</label>
+          <%# type="text" (no type="url"): el campo admite rutas locales del
+              portal (/uploads/app-icons/app-icon-<id>.png) además de http(s)://,
+              y la validación nativa HTML5 de type="url" rechazaba esas rutas
+              relativas, bloqueando el submit del formulario al editar una app
+              con icono subido (bug reportado). La validación real la hace el
+              backend (isHttpUrl acepta http/https y uploads locales). %>
+          <input type="text" id="f-icon-url" name="icon_url" placeholder="https://…/icon.png" value="<%= app && app.icon_url ? app.icon_url : '' %>">
+          <p class="hint">Solo una fuente: externa O biblioteca (no ambas).</p>
+        </div>
+        <div>
+          <label class="field-label" for="f-icon-class">Clase del icono (opcional, ej. "fas fa-database")</label>
+          <input type="text" id="f-icon-class" name="icon_class" value="<%= app && app.icon_class ? app.icon_class : '' %>">
+        </div>
+      </div>
+
+      <fieldset class="icon-picker">
+        <legend class="field-label">Icono de la biblioteca</legend>
+        <div class="icon-picker-controls">
+          <input type="search" id="icon-search" class="icon-search" placeholder="Filtrar iconos…" aria-label="Filtrar iconos">
+          <select id="icon-category-filter" class="icon-category-filter" aria-label="Filtrar por categoría">
+            <option value="">Todas las categorías</option>
+            <% var seenCategories = []; %>
+            <% iconLibrary.forEach(function (ic) { %>
+              <% if (seenCategories.indexOf(ic.category) === -1) { seenCategories.push(ic.category); %>
+                <option value="<%= ic.category %>"><%= ic.category %></option>
+              <% } %>
+            <% }) %>
+          </select>
+        </div>
+        <div class="icon-grid" id="icon-grid">
+          <label class="icon-option icon-option--none">
+            <input type="radio" name="icon_key" value="" <%= !(app && app.icon_key) ? 'checked' : '' %> data-category="all" data-label="Ninguno">
+            <span class="icon-option-thumb icon-option-thumb--none" aria-hidden="true">∅</span>
+            <span class="icon-option-label">Ninguno<br>(automático)</span>
+          </label>
+          <% iconLibrary.forEach(function (ic) { %>
+            <label class="icon-option">
+              <input type="radio" name="icon_key" value="<%= ic.slug %>" <%= app && app.icon_key === ic.slug ? 'checked' : '' %> data-category="<%= ic.category %>" data-label="<%= ic.label %>">
+              <span class="icon-option-thumb" aria-hidden="true"><img src="/icons/<%= ic.slug %>.png" alt="" loading="lazy"></span>
+              <span class="icon-option-label"><%= ic.label %></span>
+            </label>
+          <% }) %>
+        </div>
+        <p class="hint">Elige un icono de la biblioteca local (o "Ninguno" para resolver automáticamente).</p>
+      </fieldset>
+
+      <% if (isEdit) { %>
+        <div class="icon-upload-box" data-app-id="<%= app.id %>">
+          <p class="field-label">Icono personalizado subido</p>
+          <%# TODO (U-5, decisión fase producción): el token CSRF del upload
+              multipart se acepta en query (?_csrf=) porque multer no garantiza
+              que _csrf viaje en el body con multipart/form-data. Evaluar en
+              producción: cabecera X-CSRF-Token + verificación server-side. %>
+          <%# Sin <form> anidado (HTML prohibe forms dentro de forms): el envío
+              multipart se hace vía fetch desde admin.js (botón #icon-upload-btn,
+              type="button" para no interferir con el submit del form padre). %>
+          <input type="file" name="icon" id="f-icon-upload" accept=".png,.jpg,.jpeg" data-icon-upload aria-label="Elegir imagen PNG o JPEG del icono">
+          <button type="button" class="btn btn-small" id="icon-upload-btn">Subir icono personalizado</button>
+          <p class="icon-upload-error" id="icon-upload-error" role="alert" hidden></p>
+          <p class="hint">PNG/JPEG, máx. 2 MB y 1024 px por lado. Un icono subido tiene precedencia sobre la URL y la biblioteca.</p>
+        </div>
+      <% } %>
+
+      <div class="icon-preview" data-icon-preview>
+        <span class="app-icon" id="preview-icon" aria-hidden="true" style="--accent: <%= app && app.color ? app.color : '#4f8cff' %>">
+          <% if (app && app.icon && app.icon.kind === 'url') { %>
+            <img class="app-icon-img app-icon-img--custom" src="<%= app.icon.url %>" alt="">
+            <span class="app-glyph app-glyph-fallback" data-glyph hidden><%= app.name ? app.name.charAt(0).toUpperCase() : '?' %></span>
+          <% } else if (app && app.icon && app.icon.kind === 'key') { %>
+            <img class="app-icon-img app-icon-img--key" src="<%= app.icon.url %>" alt="">
+            <span class="app-glyph app-glyph-fallback" data-glyph hidden><%= app.name ? app.name.charAt(0).toUpperCase() : '?' %></span>
+          <% } else if (app && app.icon && app.icon.kind === 'class') { %>
+            <span class="app-glyph"><i class="<%= app.icon.iconClass %>"></i><span class="app-glyph-char"><%= app.name ? app.name.charAt(0).toUpperCase() : '?' %></span></span>
+          <% } else if (app && app.icon && app.icon.kind === 'favicon') { %>
+            <img class="app-icon-img app-icon-img--favicon" src="<%= app.icon.url %>" data-fallback-src="<%= app.icon.fallbackUrl %>" alt="">
+            <span class="app-glyph app-glyph-fallback" data-glyph hidden><%= app.name ? app.name.charAt(0).toUpperCase() : '?' %></span>
+          <% } else { %>
+            <span class="app-glyph"><%= app && app.name ? app.name.charAt(0).toUpperCase() : '?' %></span>
+          <% } %>
+        </span>
+        <div class="icon-preview-copy">
+          <p class="icon-preview-label">Vista previa del icono</p>
+          <p class="hint">1) icon_url / icono subido → 2) icon_key (biblioteca) → 3) icon_class → 4) favicon público → 5) inicial + color.</p>
+        </div>
+      </div>
+
+      <label class="field-label" for="f-desc">Descripción</label>
+      <textarea id="f-desc" name="description" rows="2"><%= app && app.description ? app.description : '' %></textarea>
+    </div>
+
+    <div class="form-section">
+      <h2 class="form-section-title">Organización y acceso</h2>
+      <div class="form-grid">
+        <div>
+          <label class="field-label" for="f-category">Categoría *</label>
+          <div class="category-row">
+            <select id="f-category" name="category_id" required>
+              <% categories.forEach(function (c) { %>
+                <option value="<%= c.id %>"
+                  <%= (((app != null && app.category_id != null) && String(app.category_id) === String(c.id))
+                        || ((app == null || app.category_id == null) && c.name === 'General')) ? 'selected' : '' %>>
+                  <%= c.name %>
+                </option>
+              <% }) %>
+            </select>
+            <button type="button" class="btn btn-small" id="inline-category-toggle" data-inline-category-toggle>+ Nueva categoría</button>
+            <a class="btn btn-ghost btn-small" href="/admin/categories">Gestionar categorías</a>
+          </div>
+          <div class="inline-category-box" id="inline-category-box" hidden>
+            <input type="text" id="inline-category-name" maxlength="80" placeholder="Nombre de la nueva categoría" aria-label="Nombre de la nueva categoría">
+            <button type="button" class="btn btn-small btn-primary" id="inline-category-save" data-inline-category-save>Crear</button>
+            <button type="button" class="btn btn-small" id="inline-category-cancel" data-inline-category-cancel>Cancelar</button>
+            <span class="hint" id="inline-category-error" role="alert"></span>
+          </div>
+          <p class="hint">Las categorías se crean y se seleccionan aquí (el dashboard agrupa por categoría).</p>
+        </div>
+        <div>
+          <label class="field-label" for="f-color">Color</label>
+          <div class="color-field">
+            <input type="color" id="f-color" name="color" value="<%= app && app.color ? app.color : '#4f8cff' %>">
+            <span class="color-value" id="f-color-value"><%= app && app.color ? app.color : '#4f8cff' %></span>
+          </div>
+        </div>
+        <div>
+          <label class="field-label" for="f-visibility">Visibilidad</label>
+          <select name="visibility" id="visibility">
+            <option value="public" <%= app && app.visibility === 'public' ? 'selected' : '' %>>Pública</option>
+            <option value="restricted" <%= app && app.visibility === 'restricted' ? 'selected' : '' %>>Restringida</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="groups-box" class="card-inner" hidden>
+        <label class="field-label">Grupos con acceso</label>
+        <div class="multi-select">
+          <% if (groups.length === 0) { %>
+            <p class="hint">Aún no hay grupos. Crea grupos en /admin/groups.</p>
+          <% } %>
+          <% groups.forEach(function (g) { %>
+            <label>
+              <input type="checkbox" name="groups" value="<%= g.id %>"
+                <%= selectedGroupIds.includes(g.id) ? 'checked' : '' %>>
+              <%= g.name %>
+            </label>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit"><%= isEdit ? 'Guardar cambios' : 'Crear aplicación' %></button>
+      <a class="btn btn-ghost" href="/admin/apps">Cancelar</a>
+    </div>
+  </form>
+</div>
+
+<script src="/js/admin.js?v=<%= assetVersion('/js/admin.js') %>" defer></script>

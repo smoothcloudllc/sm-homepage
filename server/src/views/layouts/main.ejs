@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es" data-default-theme="<%= typeof defaultTheme !== 'undefined' ? defaultTheme : 'system' %>">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' && title ? title : (typeof siteName !== 'undefined' ? siteName : 'SM-HomePage') %> · <%= typeof siteName !== 'undefined' ? siteName : 'SM-HomePage' %></title>
+  <link rel="icon" href="/logo?v=<%= typeof logoVersion !== 'undefined' ? logoVersion : '0' %>">
+  <script src="/js/theme.js?v=<%= assetVersion('/js/theme.js') %>"></script>
+  <link rel="stylesheet" href="/css/styles.css?v=<%= assetVersion('/css/styles.css') %>">
+</head>
+<body style="--bg: <%= config.portal.bgColor %>; --bg-image: <%= config.portal.bgImage ? 'url(' + config.portal.bgImage + ')' : 'none' %>">
+  <a class="skip-link" href="#main-content">Saltar al contenido</a>
+
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="<%= typeof siteName !== 'undefined' ? siteName : 'SM-HomePage' %> — panel de inicio">
+      <span class="brand-mark" aria-hidden="true">
+        <img class="brand-logo" src="/logo?v=<%= typeof logoVersion !== 'undefined' ? logoVersion : '0' %>" alt="" width="22" height="22">
+      </span>
+      <span class="brand-name"><%= typeof siteName !== 'undefined' ? siteName : 'SM-HomePage' %></span>
+    </a>
+
+    <button type="button" class="theme-toggle" data-theme-toggle aria-label="Cambiar tema">
+      <svg class="icon icon-sun" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      <svg class="icon icon-moon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+    </button>
+
+    <% if (typeof user !== 'undefined' && user) { %>
+      <% var roleLabel = { super_admin: 'Super admin', admin: 'Administrador', employee: 'Empleado' }[user.role] || user.role; %>
+      <div class="user-menu" id="user-menu" data-menu>
+        <button type="button" class="user-menu-trigger" data-menu-trigger
+                aria-haspopup="true" aria-expanded="false" aria-controls="user-menu-panel">
+          <span class="avatar" aria-hidden="true"><%= String(user.displayName || user.email).charAt(0).toUpperCase() %></span>
+          <span class="user-meta">
+            <span class="user-name"><%= user.displayName %></span>
+            <span class="user-role"><%= roleLabel %></span>
+          </span>
+          <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="user-menu-panel" id="user-menu-panel" data-menu-panel role="menu" hidden>
+          <div class="menu-head">
+            <span class="menu-email"><%= user.email %></span>
+          </div>
+          <a href="/" role="menuitem">Panel de aplicaciones</a>
+          <% if (user.role === 'super_admin' || user.role === 'admin') { %>
+            <a href="/admin/apps" role="menuitem">Consola de administración</a>
+          <% } %>
+          <form method="post" action="/auth/logout" class="logout-form">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" class="menu-logout" role="menuitem">Cerrar sesión</button>
+          </form>
+        </div>
+      </div>
+    <% } else { %>
+      <a class="btn btn-primary topbar-login" href="/login">Iniciar sesión</a>
+    <% } %>
+  </header>
+
+  <% var isAdminArea = (typeof user !== 'undefined' && user) && currentPath.indexOf('/admin') === 0; %>
+
+  <% if (isAdminArea) { %>
+  <div class="admin-shell">
+    <aside class="sidebar">
+      <nav class="sidebar-nav" aria-label="Navegación de administración">
+        <a href="/" class="sidebar-link <%= currentPath === '/' ? 'active' : '' %>">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+          Panel
+        </a>
+        <span class="sidebar-section">Administración</span>
+        <a href="/admin/apps" class="sidebar-link <%= currentPath.indexOf('/admin/apps') === 0 ? 'active' : '' %>">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+          Aplicaciones
+        </a>
+        <a href="/admin/users" class="sidebar-link <%= currentPath.indexOf('/admin/users') === 0 ? 'active' : '' %>">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Usuarios
+        </a>
+        <a href="/admin/groups" class="sidebar-link <%= currentPath.indexOf('/admin/groups') === 0 ? 'active' : '' %>">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Grupos
+        </a>
+        <a href="/admin/categories" class="sidebar-link <%= currentPath.indexOf('/admin/categories') === 0 ? 'active' : '' %>">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+          Categorías
+        </a>
+        <% if (user.role === 'super_admin') { %>
+          <a href="/admin/audit" class="sidebar-link <%= currentPath.indexOf('/admin/audit') === 0 ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            Auditoría
+          </a>
+          <a href="/admin/settings" class="sidebar-link <%= currentPath.indexOf('/admin/settings') === 0 ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+            Configuración
+          </a>
+        <% } %>
+      </nav>
+      <div class="sidebar-foot">
+        <a class="btn btn-ghost btn-sm" href="/">← Volver al panel</a>
+      </div>
+    </aside>
+    <main id="main-content" class="admin-main" tabindex="-1">
+      <%- include(view) %>
+    </main>
+  </div>
+  <% } else { %>
+  <main id="main-content" class="<%= typeof user !== 'undefined' && user ? 'main-authed' : 'main-guest' %><%= view.indexOf('dashboard') === 0 ? ' main-dashboard' : '' %>" tabindex="-1">
+    <%- include(view) %>
+  </main>
+  <% } %>
+
+  <script src="/js/ui.js?v=<%= assetVersion('/js/ui.js') %>" defer></script>
+</body>
+</html>
