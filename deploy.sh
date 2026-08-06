@@ -547,10 +547,31 @@ check_existing_env() {
   fi
 }
 
+check_repo_integrity() {
+  local file="" missing=""
+  for file in \
+    docker-compose.yml \
+    server/Dockerfile \
+    server/package.json \
+    server/src/schema.sql \
+    server/src/index.js
+  do
+    if [ ! -f "$file" ] || [ ! -s "$file" ]; then
+      missing="$missing
+    - $file"
+    fi
+  done
+  if [ -n "$missing" ]; then
+    die "El repositorio está incompleto o corrupto. Faltan o están vacíos los archivos críticos:$missing"
+  fi
+  log "Integridad del repositorio OK (archivos críticos presentes y no vacíos)."
+}
+
 prechecks() {
   log "Fase 0 — Prechecks"
   detect_os
   check_core_deps
+  check_repo_integrity
   check_docker
   check_default_port
   check_existing_env

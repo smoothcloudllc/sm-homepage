@@ -82,14 +82,36 @@ EOF
 # -----------------------------------------------------------------------------
 # Prechecks
 # -----------------------------------------------------------------------------
+check_repo_integrity() {
+  local file="" missing=""
+  for file in \
+    docker-compose.yml \
+    server/Dockerfile \
+    server/package.json \
+    server/src/schema.sql \
+    server/src/index.js
+  do
+    if [ ! -f "$file" ] || [ ! -s "$file" ]; then
+      missing="$missing
+    - $file"
+    fi
+  done
+  if [ -n "$missing" ]; then
+    die "El repositorio está incompleto o corrupto. Faltan o están vacíos los archivos críticos:$missing"
+  fi
+  log "Integridad del repositorio OK (archivos críticos presentes y no vacíos)."
+}
+
 prechecks() {
   [ -f docker-compose.yml ] || die "No encuentro docker-compose.yml en $DIR. Ejecuta update.sh desde la raíz del proyecto."
   [ -f .env ] || die "No hay .env — ejecuta primero 'bash deploy.sh'."
   command -v docker >/dev/null 2>&1 || die "Docker no está instalado."
   docker compose version >/dev/null 2>&1 || die "Docker Compose (plugin) no está disponible."
+  docker compose config --quiet || die "docker-compose.yml es inválido o incompleto. Revisa el archivo y vuelve a ejecutar."
   command -v gzip >/dev/null 2>&1 || die "gzip no está instalado."
   command -v curl >/dev/null 2>&1 || die "curl no está instalado."
   command -v tar >/dev/null 2>&1 || die "tar no está instalado."
+  check_repo_integrity
   log "Prechecks OK (docker + compose + dependencias)."
 }
 

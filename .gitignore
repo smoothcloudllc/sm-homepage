@@ -16,8 +16,11 @@ server/public/uploads/
 
 # Backups y volcados de BD
 backups/
-*.sql
 *.dump
+*.sql.gz
+
+# OJO: server/src/schema.sql se trackea a propósito — NO reintroducir *.sql global
+!server/src/schema.sql
 
 # Logs
 *.log
