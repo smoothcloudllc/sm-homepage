@@ -184,6 +184,53 @@ backup_db() {
 }
 
 # -----------------------------------------------------------------------------
+# Bind del puerto (BIND_ADDR) — paso pre-deploy
+# -----------------------------------------------------------------------------
+# Si el .env no tiene BIND_ADDR (instalaciones previas a esta versión), se
+# deriva de PORTAL_URL si existe; si no existe PORTAL_URL, se pregunta al
+# operador. La app NO lee esta variable: solo la usa docker-compose.yml para
+# publicar el puerto (0.0.0.0 = red interna/intranet, 127.0.0.1 = solo local).
+ensure_bind_addr() {
+  local current="" host="" answer="" portal_url=""
+  current="$(env_get .env BIND_ADDR)"
+  if [ -n "$current" ]; then
+    log "BIND_ADDR ya definido en .env → $current."
+    return 0
+  fi
+
+  portal_url="$(env_get .env PORTAL_URL)"
+  if [ -n "$portal_url" ]; then
+    # Derivación con detección SOLO loopback (localhost/127.*/::1/0.0.0.0 →
+    # 127.0.0.1; cualquier otra URL, incl. RFC1918, → 0.0.0.0).
+    host="$(printf '%s' "$portal_url" | sed -E 's|^https?://([^/:@]+).*|\1|')"
+    case "$host" in
+      localhost|127.*|::1|0.0.0.0) current="127.0.0.1" ;;
+      *) current="0.0.0.0" ;;
+    esac
+    log "BIND_ADDR derivado de PORTAL_URL ($portal_url) → $current."
+  else
+    echo
+    echo "  Bind del puerto: ¿el puerto debe ser accesible desde la red interna"
+    echo "  (0.0.0.0, recomendado — permite un proxy/Caddy en otra máquina) o solo"
+    echo "  local (127.0.0.1)?"
+    while :; do
+      printf '  Opción [0.0.0.0]: '
+      if ! read -r answer; then echo; echo "  Entrada cancelada."; exit 1; fi
+      [ -z "$answer" ] && answer="0.0.0.0"
+      case "$answer" in
+        0.0.0.0|127.0.0.1) current="$answer"; break ;;
+        *) echo "  ✗ Opciones válidas: 0.0.0.0 (red interna) o 127.0.0.1 (solo local)." ;;
+      esac
+    done
+    log "BIND_ADDR elegido por el operador → $current."
+  fi
+
+  printf 'BIND_ADDR=%s\n' "$current" >> .env
+  chmod 600 .env
+  log "BIND_ADDR=$current añadido a .env (lo usa docker-compose.yml para publicar el puerto)."
+}
+
+# -----------------------------------------------------------------------------
 # Salud y restauración
 # -----------------------------------------------------------------------------
 wait_healthy() {
@@ -244,8 +291,10 @@ main() {
   latest="$(ls -1t "$BACKUP_DIR"/corphomepage-*.sql.gz 2>/dev/null | head -n1 || true)"
 
   log "Build + despliegue (sin tocar volúmenes)..."
+  ensure_bind_addr
   docker compose build --pull
   docker compose up -d
+  log "Nota: 'docker compose up -d' recrea SOLO el contenedor web si BIND_ADDR/ports cambió (caída breve); no se tocan secretos ni volúmenes."
 
   log "Esperando salud del stack (db+web healthy y /login 200, máx 120 s)..."
   if wait_healthy "$PORT"; then

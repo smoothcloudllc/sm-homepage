@@ -332,7 +332,11 @@ Despliegue recomendado de un entorno de producción:
 1. **TLS en el borde**: sitúa la app detrás de un reverse proxy (nginx,
    Traefik, Caddy…) que termine TLS. Deja `COOKIE_SECURE=true` (el default) y
    **no expongas el puerto 3000 directamente a Internet**: en `docker-compose`
-   el puerto bindea en `127.0.0.1` por defecto; el proxy enruta hacia él.
+   el bind es parametrizable con `BIND_ADDR` (default `127.0.0.1`). El
+   asistente escribe `BIND_ADDR=0.0.0.0` cuando la URL pública es de red
+   interna (RFC1918, dominio) — entonces el puerto se publica en la intranet y
+   un proxy/Caddy en **otra máquina** puede enrutar hacia él; escribe
+   `127.0.0.1` cuando la URL es `localhost` (solo local).
 2. **Correo real**: usa `MAIL_DRIVER=smtp` (o `sendgrid`) con `MAIL_FROM`
    definido y un dominio remitente verificado. Nunca `MAIL_DRIVER=log`.
 3. **Variables críticas**: define `SESSION_SECRET` (largo y aleatorio),
@@ -400,7 +404,8 @@ Todas están documentadas (en español) en `.env.example`. Las críticas son:
 | `DEFAULT_THEME` | Tema inicial: `light` \| `dark` \| `system` (settings `default_theme` tiene precedencia). |
 | `ALLOWED_EMAIL_DOMAINS` | Alias nuevo de la allow-list de dominios; si existe, tiene prioridad sobre `ALLOWED_DOMAINS`. |
 | `POSTGRES_PASSWORD` | Contraseña del usuario de PostgreSQL. **Obligatoria** (sin default): `docker-compose` falla si no la defines. |
-| `PORT` | Puerto HTTP donde escucha la app (por defecto 3000). En compose se expone en `127.0.0.1` por defecto. |
+| `PORT` | Puerto HTTP donde escucha la app (por defecto 3000). En compose el bind es parametrizable con `BIND_ADDR` (default `127.0.0.1`; `0.0.0.0` publica en la red interna). |
+| `BIND_ADDR` | Dirección de bind del puerto en `docker-compose` (default `127.0.0.1` = solo loopback). `0.0.0.0` publica en la red interna (intranet/VLAN/proxy remoto en otra máquina). Lo deriva y escribe `deploy.sh` (detección solo-loopback) y `update.sh`; **la app no la lee**. |
 | `ANONYMOUS_MODE` | Modo anónimo del dashboard. Default `ON` (las apps públicas se ven sin sesión). `ANONYMOUS_MODE=off` lo desactiva: GET `/` sin sesión redirige a `/login`. **Recomendado `off`** en despliegues solo-autenticados expuestos a Internet con TLS. |
 | `TRUST_PROXY` | Hops de reverse proxy de confianza (Caddy/Nginx) para el rate limiting y la auditoría. `0` (default) = red interna directa / red privada (VPN): `req.ip` es la IP real y un `X-Forwarded-For` forjado no altera nada. `1` = detrás de un proxy de confianza con TLS (entonces `X-Forwarded-For` es fiable). NUNCA activar sin proxy delante. |
 

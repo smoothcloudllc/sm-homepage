@@ -52,7 +52,7 @@ inválidas:
 
 | Pregunta | Default | Notas |
 |---|---|---|
-| Modo de instalación | `rapido` | **rápido** aplica defaults seguros (puerto 3000, anónimo `on`, `TRUST_PROXY=0`, dominios = dominio del admin, código de arranque siempre generado); **personalizado** pregunta cada opción |
+| Modo de instalación | `rapido` | **rápido** aplica defaults seguros (puerto 3000, anónimo `on`, `TRUST_PROXY` coherente con la URL, dominios = dominio del admin, código de arranque siempre generado); **personalizado** pregunta cada opción |
 | URL pública del portal | `http://localhost` | `https://…` deriva `COOKIE_SECURE=true`; `http://…` advierte (cookies sin Secure) y deriva `false` |
 | Nombre de la empresa/portal | `SM-HomePage` | 1-60 caracteres |
 | Email del super_admin | — | **obligatorio**; única vía de bootstrap |
@@ -62,10 +62,11 @@ inválidas:
 | Remitente (`MAIL_FROM`) | `no-reply@<dominio>` | email válido; en el camino SendGrid se deriva automáticamente |
 | Dominios de correo permitidos | dominio del email del admin | separados por coma; solo se pregunta en modo **personalizado** |
 | Puerto HTTP | `3000` | solo en modo **personalizado**; 1-65535 y debe estar libre |
+| Bind del puerto (`BIND_ADDR`) | derivado de la URL | en modo **personalizado** se pregunta: `0.0.0.0` (accesible desde la red interna — recomendado si hay un proxy/Caddy en otra máquina) o `127.0.0.1` (solo local). En modo **rápido** se deriva automáticamente: URL `localhost`/`127.*` → `127.0.0.1`; cualquier otra (RFC1918, dominio…) → `0.0.0.0` |
 | Entorno | `production` (o `development` si localhost) | solo en modo **personalizado**; `development` con URL no-localhost avisa |
 | Código de arranque de 6 dígitos (`BOOTSTRAP_CODE`) | `generar` | en modo **rápido** se genera **siempre**; en modo **personalizado** se pregunta `generar`/`no`. Se muestra **una sola vez** al final (single-use). Prioridad sobre `BOOTSTRAP_TOKEN` |
 | Modo anónimo | `on` | solo en modo **personalizado**; `on`/`off` |
-| TRUST_PROXY | `0` | solo en modo **personalizado**; pon `1` **solo** si hay Caddy/Nginx con TLS delante |
+| TRUST_PROXY | `1` si la URL es https, si no `0` | solo en modo **personalizado**; pon `1` **solo** si hay Caddy/Nginx con TLS delante |
 
 ### Fase 2 — Resumen y confirmación
 Se muestran todos los valores con los secretos **enmascarados** (`****…`).
@@ -119,17 +120,27 @@ con mensaje claro si faltan valores obligatorios** (p. ej. `SUPER_ADMIN_EMAIL`,
 
 ### TLS en el borde (recomendado)
 
-Expón el portal **solo** a través de un reverse proxy con TLS y deja el
-puerto de la app bindeado a `127.0.0.1` (así queda en `docker-compose.yml`).
-Ejemplo con **Caddy**:
+Expón el portal **solo** a través de un reverse proxy con TLS. El bind del
+puerto es parametrizable con `BIND_ADDR` (lo escribe `deploy.sh` según la URL
+pública):
+
+- **Proxy en la misma máquina (variante)**: `BIND_ADDR=127.0.0.1` y el proxy
+  apunta a `127.0.0.1:3000`.
+- **Proxy en otra máquina / intranet (caso real)**: `BIND_ADDR=0.0.0.0` — el
+  puerto se publica en la red interna y el proxy remoto apunta a la **IP del
+  host** que ejecuta la app (p. ej. `172.16.30.12:3000`).
+
+Ejemplo con **Caddy** (proxy en otra máquina, intranet):
 
 ```
 portal.miempresa.com {
-    reverse_proxy 127.0.0.1:3000
+    reverse_proxy 172.16.30.12:3000
 }
 ```
 
-Ejemplo con **Nginx**:
+Variante **Caddy same-host**: `reverse_proxy 127.0.0.1:3000`.
+
+Ejemplo con **Nginx** (variante same-host):
 
 ```nginx
 server {
@@ -148,6 +159,7 @@ server {
 
 > Si pones el proxy delante, configura `TRUST_PROXY=1` durante el despliegue
 > (o edítalo en `.env` y reinicia) para que el rate limiting use la IP real.
+> Con URL `https://` el asistente lo activa automáticamente.
 
 ### Correo real (SMTP / SendGrid)
 
@@ -240,7 +252,9 @@ docker compose logs web | grep -i "Código OTP"
 ### Contraseña del puerto ya en uso
 
 Cambia `PORT` en `.env` o elige otro puerto en el asistente. Recuerda que el
-bind es a `127.0.0.1`; el proxy debe apuntar al nuevo puerto.
+bind (`BIND_ADDR`) es `127.0.0.1` solo para localhost (o modo rápido con URL
+`localhost`); con `0.0.0.0` el puerto queda publicado en la red interna y el
+proxy debe apuntar a la **IP del host** (p. ej. `172.16.30.12:<nuevo-puerto>`).
 
 ### Reparar el `.env`
 

@@ -22,12 +22,18 @@ autenticación, el control de acceso y las decisiones de seguridad.
 - **`db`**: `postgres:16-alpine`, volumen `pgdata`, healthcheck con
   `pg_isready`. `POSTGRES_PASSWORD` es **obligatoria** (sin default).
 - **`web`**: imagen construida desde `server/`, usuario **no-root**
-  (`USER node`), `security_opt: no-new-privileges`, bind del puerto a
-  `127.0.0.1`, healthcheck con `wget` a `/login`, volumen `uploads` para el
+  (`USER node`), `security_opt: no-new-privileges`, bind del puerto
+  **parametrizable** con `BIND_ADDR` (default `127.0.0.1`; `0.0.0.0` publica en
+  la red interna), healthcheck con `wget` a `/login`, volumen `uploads` para el
   logo de la empresa. `depends_on: db (service_healthy)`.
 
-El puerto se expone únicamente en `127.0.0.1`; la exposición real debe hacerse
-a través de un **reverse proxy con TLS** (Caddy/Nginx/Traefik).
+El bind lo deriva `deploy.sh` con **detección SOLO loopback** (`localhost`,
+`127.*`, `::1`, `0.0.0.0` → `127.0.0.1`); cualquier otra URL —incluidas las
+RFC1918 (`10.x`, `192.168.x`, `172.16-31.x`), IPs CGNAT (`100.x`), IP pública o
+dominio— → `0.0.0.0`, de modo que un proxy/Caddy en **otra máquina** de la
+intranet alcance la app. La exposición a usuarios debe hacerse a través de un
+**reverse proxy con TLS** (Caddy/Nginx/Traefik); las ACLs NetBird/Zero-Trust
+son la frontera real de acceso.
 
 ## 3. Modelo de datos
 
@@ -106,7 +112,11 @@ permitido (anti-lockout).
   también en query/header).
 - **Rate limiting** por IP real (`req.ip`). `TRUST_PROXY` solo debe activarse
   si hay un proxy de confianza con TLS delante (si no, un `X-Forwarded-For`
-  forjado podría alterar `req.ip`).
+  forjado podría alterar `req.ip`). `deploy.sh` lo mantiene **coherente con el
+  bind**: con URL `https://` el default es `1` (proxy de confianza delante), y
+  con `BIND_ADDR=0.0.0.0` + URL `http://` pide **confirmación explícita**
+  (confiar en `X-Forwarded-For` sin TLS permite forjar IPs y saltarse el rate
+  limiting).
 - **Queries parametrizadas** en todo el código y escape por defecto en EJS.
 - **Logo por magic bytes**: solo PNG/JPEG reales (≤2 MB, ≤2048 px), nombre
   fijado por el servidor (sin path traversal), con cache-busting `?v=`.

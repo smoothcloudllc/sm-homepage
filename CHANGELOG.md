@@ -4,6 +4,23 @@ Todas las entradas notables del proyecto **SM-HomePage**. El formato sigue
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto
 mantiene [Versionado Semántico](https://semver.org/lang/es/).
 
+## [Unreleased]
+
+### Añadido
+
+- **Bind de puerto configurable (`BIND_ADDR`)** para despliegues de intranet:
+  `docker-compose.yml` publica el puerto en `BIND_ADDR` (default `127.0.0.1`,
+  fail-closed) y `deploy.sh`/`update.sh` lo derivan de la URL pública con
+  **detección solo-loopback** (localhost/`127.*`/`::1`/`0.0.0.0` →
+  `127.0.0.1`; cualquier otra URL —RFC1918, dominio…— → `0.0.0.0`), de modo que
+  un proxy/Caddy en otra máquina de la red alcanza la app. Incluye pregunta en
+  modo personalizado, coherencia `TRUST_PROXY` con la URL (`https` → default
+  `1`), avisos de seguridad (bind expuesto a red no-RFC1918 y confirmación
+  explícita si `BIND_ADDR=0.0.0.0` + `TRUST_PROXY=1` + URL `http`), escritura
+  de `BIND_ADDR` y `PORTAL_URL` en el `.env`, y re-derivación segura en
+  `update.sh`. Documentación actualizada (README, INSTALACION, ARQUITECTURA,
+  `.env.example`).
+
 ## [1.0.0] - 2026-08-04
 
 ### Primera versión estable

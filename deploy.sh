@@ -42,6 +42,7 @@ SMTP_PASS=""
 MAIL_FROM=""
 SENDGRID_API_KEY=""
 PORT=3000
+BIND_ADDR=127.0.0.1
 NODE_ENV=""
 BOOTSTRAP_TOKEN=""
 BOOTSTRAP_CODE=""
@@ -336,6 +337,30 @@ is_local_url() {
   esac
 }
 
+# ¿El host de la URL es SOLO loopback (localhost, 127.*, ::1, 0.0.0.0)?
+# IMPORTANTE: NO incluye RFC1918 (10.x, 192.168.x, 172.16-31.x). Esas IPs son
+# red interna: el puerto debe publicarse (BIND_ADDR=0.0.0.0) para que un proxy/
+# Caddy en otra máquina alcance la app. Usar is_local_url() aquí reproduciría
+# el incidente real de Caddy inalcanzable.
+is_loopback_url() {
+  local url="$1" host=""
+  host="$(printf '%s' "$url" | sed -E 's|^https?://([^/:@]+).*|\1|')"
+  case "$host" in
+    localhost|127.*|::1|0.0.0.0) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# ¿El host de la URL es una IP RFC1918 (red privada 10/8, 172.16/12, 192.168/16)?
+is_rfc1918_url() {
+  local url="$1" host=""
+  host="$(printf '%s' "$url" | sed -E 's|^https?://([^/:@]+).*|\1|')"
+  case "$host" in
+    10.*|192.168.*|172.1[6-9].*|172.2[0-9].*|172.3[0-1].*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 # ¿URL HTTP (sin TLS) contra host local/privado? → NODE_ENV=development forzado.
 is_insecure_local_url() {
   local url="$1" host=""
@@ -348,6 +373,42 @@ is_insecure_local_url() {
     localhost|127.*|::1|0.0.0.0|10.*|192.168.*|172.1[6-9].*|172.2[0-9].*|172.3[0-1].*) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+# Deriva BIND_ADDR a partir de URL_PUBLICA con detección SOLO loopback:
+#   localhost / 127.* / ::1 / 0.0.0.0      → 127.0.0.1 (solo local, fail-closed)
+#   cualquier otra URL (RFC1918, 100.x, IP pública, dominio) → 0.0.0.0 (red interna)
+derive_bind_addr() {
+  if is_loopback_url "$URL_PUBLICA"; then
+    BIND_ADDR="127.0.0.1"
+  else
+    BIND_ADDR="0.0.0.0"
+  fi
+  log "BIND_ADDR derivado de URL_PUBLICA ($URL_PUBLICA) → $BIND_ADDR."
+}
+
+# Avisos de seguridad del bind (no bloqueantes salvo el caso (b) interactivo):
+#   (a) BIND_ADDR=0.0.0.0 con URL no-RFC1918 (posible Internet) → aviso.
+#   (b) BIND_ADDR=0.0.0.0 + TRUST_PROXY=1 + URL http → confirmación explícita
+#       en interactivo (confiar en X-Forwarded-For sin TLS permite forjar IPs);
+#       en no interactivo solo log de aviso (no bloquea).
+bind_security_warnings() {
+  if [ "$BIND_ADDR" = "0.0.0.0" ] && ! is_rfc1918_url "$URL_PUBLICA" && ! is_loopback_url "$URL_PUBLICA"; then
+    echo "  ⚠ BIND_ADDR=0.0.0.0 con URL no-RFC1918 ($URL_PUBLICA): puerto expuesto a red."
+    echo "    Si hay ruta a Internet: TLS en el borde + ANONYMOUS_MODE=off."
+    log "AVISO: BIND_ADDR=0.0.0.0 con URL no-RFC1918 ($URL_PUBLICA) — puerto expuesto a red."
+  fi
+  if [ "$BIND_ADDR" = "0.0.0.0" ] && [ "$TRUST_PROXY" = "1" ] && [ "${URL_PUBLICA#http://}" != "$URL_PUBLICA" ]; then
+    local msg="Confiar en X-Forwarded-For sin TLS en el borde permite forjar IPs y saltarse el rate limiting."
+    echo "  ⚠ $msg"
+    log "AVISO: $msg (BIND_ADDR=0.0.0.0 + TRUST_PROXY=1 + URL http)."
+    if [ "$NON_INTERACTIVE" -eq 0 ] && [ "$DRY_RUN" -eq 0 ]; then
+      if ! confirm "¿Continuar igualmente (TRUST_PROXY=1 con URL http, sin TLS en el borde)?" "no"; then
+        TRUST_PROXY=0
+        log "TRUST_PROXY forzado a 0 por confirmación (BIND_ADDR=0.0.0.0 + URL http sin TLS)."
+      fi
+    fi
+  fi
 }
 
 # Deriva/valida NODE_ENV coherente con la URL. localhost+production incoherente
@@ -619,6 +680,7 @@ gather_interactive() {
     "Debe ser una URL con esquema http:// o https://."
   derive_cookie_secure
   derive_node_env
+  derive_bind_addr
 
   # 2. Nombre del sitio
   ask SITE_NAME "Nombre del sitio (aparece en el título, login y correos)" "SM-HomePage" '^.{1,60}$' "Entre 1 y 60 caracteres."
@@ -635,10 +697,21 @@ gather_interactive() {
     # Defaults seguros del modo rápido
     PORT=3000
     ANONYMOUS_MODE="on"
-    TRUST_PROXY=0
+    # Coherencia TRUST_PROXY: URL https → proxy de confianza delante (1); si no, 0.
+    if [ "${URL_PUBLICA#https://}" != "$URL_PUBLICA" ]; then
+      TRUST_PROXY=1
+      log "Modo rápido: URL https:// → TRUST_PROXY=1 (proxy de confianza delante)."
+      echo "  (Modo rápido: URL https → TRUST_PROXY=1 para que el rate limiting vea la IP real.)"
+    else
+      TRUST_PROXY=0
+    fi
     ALLOWED_EMAIL_DOMAINS="$admin_dom"
-    log "Modo rápido: defaults PORT=3000, ANONYMOUS_MODE=on, TRUST_PROXY=0, dominios=$admin_dom."
-    echo "  (Defaults del modo rápido: puerto 3000, modo anónimo on, trust proxy 0, dominios = $admin_dom)"
+    log "Modo rápido: defaults PORT=3000, ANONYMOUS_MODE=on, TRUST_PROXY=$TRUST_PROXY, dominios=$admin_dom."
+    echo "  (Defaults del modo rápido: puerto 3000, modo anónimo on, trust proxy $TRUST_PROXY, dominios = $admin_dom)"
+    if [ "$BIND_ADDR" = "127.0.0.1" ]; then
+      echo "  ⚠ AVISO: URL localhost → bind loopback; el puerto NO será alcanzable desde la red/proxy remoto."
+      log "AVISO: URL localhost → bind loopback (BIND_ADDR=127.0.0.1); el puerto NO será alcanzable desde la red/proxy remoto."
+    fi
 
     # 5. Código de arranque: se genera SIEMPRE en modo rápido (R2)
     BOOTSTRAP_CODE="$(generate_bootstrap_code)"
@@ -665,6 +738,14 @@ gather_interactive() {
     # 7. Puerto HTTP
     ask_port
 
+    # 7b. Bind del puerto (BIND_ADDR): red interna (0.0.0.0) o solo local (127.0.0.1)
+    ask_choice BIND_ADDR \
+      "Bind del puerto — accesible desde la red interna (0.0.0.0) o solo local (127.0.0.1)" \
+      "$BIND_ADDR" \
+      "0.0.0.0|127.0.0.1" \
+      "Opciones: 0.0.0.0 (red interna), 127.0.0.1 (solo local)."
+    log "BIND_ADDR (personalizado) → $BIND_ADDR."
+
     # 8. Código de arranque de 6 dígitos (R2, reemplaza al token hex)
     local bc_choice=""
     ask_choice bc_choice "Generar código de arranque de 6 dígitos (de un solo uso, recomendado)" "generar" "generar|no" "Opciones: generar, no."
@@ -680,8 +761,14 @@ gather_interactive() {
     # 9. Avanzadas opcionales
     ask_choice ANONYMOUS_MODE "Modo anónimo (permite ver apps públicas sin login)" "on" "on|off" "Opciones: on, off."
     echo "  (TRUST_PROXY: pon 1 SOLO si hay Caddy/Nginx con TLS delante de la app)"
-    ask_choice TRUST_PROXY "TRUST_PROXY" "0" "0|1" "Opciones: 0, 1."
+    # Coherencia TRUST_PROXY: URL https → default 1 (proxy de confianza); si no, 0.
+    local trust_default="0"
+    [ "${URL_PUBLICA#https://}" != "$URL_PUBLICA" ] && trust_default="1"
+    ask_choice TRUST_PROXY "TRUST_PROXY" "$trust_default" "0|1" "Opciones: 0, 1."
+    log "TRUST_PROXY (personalizado) → $TRUST_PROXY."
   fi
+
+  bind_security_warnings
 
   # Garantía final: si MAIL_DRIVER=sendgrid siempre debe haber MAIL_FROM derivado.
   if [ "$MAIL_DRIVER" = "sendgrid" ] && [ -z "$MAIL_FROM" ]; then
@@ -712,6 +799,7 @@ gather_noninteractive() {
     SENDGRID_API_KEY="$(env_get "$ENV_FILE" SENDGRID_API_KEY)"
     NODE_ENV="$(env_get "$ENV_FILE" NODE_ENV)"
     PORT="$(env_get "$ENV_FILE" PORT)"
+    BIND_ADDR="$(env_get "$ENV_FILE" BIND_ADDR)"
     SESSION_SECRET="$(env_get "$ENV_FILE" SESSION_SECRET)"
     POSTGRES_PASSWORD="$(env_get "$ENV_FILE" POSTGRES_PASSWORD)"
     BOOTSTRAP_TOKEN="$(env_get "$ENV_FILE" BOOTSTRAP_TOKEN)"
@@ -740,6 +828,19 @@ gather_noninteractive() {
       https://*) COOKIE_SECURE=true ;;
       *) COOKIE_SECURE=false ;;
     esac
+  fi
+
+  # BIND_ADDR: si viene del env-file se valida abajo; si no, se deriva de la
+  # URL con detección SOLO loopback (RFC1918 NO cuenta como local).
+  if [ -z "$BIND_ADDR" ]; then
+    if is_loopback_url "$URL_PUBLICA"; then
+      BIND_ADDR="127.0.0.1"
+    else
+      BIND_ADDR="0.0.0.0"
+    fi
+    log "BIND_ADDR derivado de URL_PUBLICA ($URL_PUBLICA) → $BIND_ADDR."
+  else
+    log "BIND_ADDR leído del env-file → $BIND_ADDR."
   fi
 
   # Coherencia NODE_ENV/COOKIE_SECURE (Asistente v2, punto 5) — no interactivo.
@@ -820,6 +921,10 @@ gather_noninteractive() {
   if ! printf '%s' "$PORT" | grep -qE "$PORT_RE" || [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; then
     errors+=("Puerto HTTP inválido: $PORT")
   fi
+  case "$BIND_ADDR" in
+    127.0.0.1|0.0.0.0) : ;;
+    *) errors+=("BIND_ADDR inválido: $BIND_ADDR (valores válidos: 127.0.0.1 o 0.0.0.0)") ;;
+  esac
   if [ "${#errors[@]}" -gt 0 ]; then
     local msg
     msg="Faltan o son inválidos valores obligatorios (--non-interactive):
@@ -829,6 +934,9 @@ $(printf '  - %s\n' "${errors[@]}")"
   if port_in_use "$PORT"; then
     log "AVISO: el puerto $PORT está en uso (continúa igualmente)."
   fi
+
+  # Avisos de seguridad del bind (en no interactivo: solo log, no bloquea).
+  bind_security_warnings
 }
 
 # -----------------------------------------------------------------------------
@@ -873,6 +981,7 @@ show_summary() {
       ;;
   esac
   echo "  Puerto HTTP     : $PORT"
+  echo "  Bind de red     : $BIND_ADDR (0.0.0.0 = red interna, 127.0.0.1 = solo local)"
   echo "  Entorno         : $NODE_ENV"
   echo "  Cookie Secure   : $COOKIE_SECURE"
   echo "  Modo anónimo    : $ANONYMOUS_MODE"
@@ -920,6 +1029,9 @@ write_env() {
 # ======================================================================
 NODE_ENV=$NODE_ENV
 PORT=$PORT
+# BIND_ADDR y PORTAL_URL son SOLO para el asistente/update.sh — la app no las lee.
+BIND_ADDR=$BIND_ADDR
+PORTAL_URL=$URL_PUBLICA
 SESSION_SECRET=$SESSION_SECRET
 SESSION_DAYS=30
 SESSION_ROTATE_DAYS=7
